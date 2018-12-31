@@ -1,0 +1,163 @@
+import pygame
+import sys
+import random
+# initialization
+pygame.init()
+
+size = width, height = 1000,600 # set the screen size
+WHITE = 255,255,255
+
+BLUE = 0,0,255
+BLACK = 0,0,0
+RED = 255,0,0
+GREEN = 0,255,0
+
+Shenqing = 131,175,155
+Qianhong = 254,67,101
+Qianhuang = 249,205,173
+
+ColorTuple = [(0,0,255),(50,25,230),(100,50,205),(150,75,185)]
+
+screen = pygame.display.set_mode(size) 
+pygame.display.set_caption('Sneaky Snake') 
+font = pygame.font.Font(None,32)  
+class Circle:
+    def __init__(self):
+        self.x, self.y = width//2,height//2   
+        self.radius  = 30
+        self.vx = 0
+        self.vy = 0
+        self.color = Qianhong
+    def move(self, ToX, ToY):
+        vfactor = 3
+        self.vx = ToX - self.x
+        self.vy = ToY - self.y
+        self.vx = self.vx // vfactor
+        self.vy = self.vy // vfactor
+        self.x  = self.x +self.vx
+        self.y  = self.y +self.vy
+    def draw(self):
+        pygame.draw.circle(screen, self.color, (self.x ,self.y) , self.radius, 0)
+class Head:
+    def __init__(self):
+        self.x, self.y = pygame.mouse.get_pos()  
+        self.image = pygame.image.load('bullet.png').convert_alpha()
+        self.vx = 0
+        self.vy = 0
+    def move(self, ToX, ToY):
+        vfactor = 3
+        self.vx = ToX - self.x
+        self.vy = ToY - self.y
+        self.vx = self.vx // vfactor
+        self.vy = self.vy // vfactor
+        self.x  = self.x +self.vx
+        self.y  = self.y +self.vy
+class Fruit:
+    def __init__(self):
+        self.x =  random.randint(25,width-25)   # random apperance
+        self.y =  random.randint(25,height-25)
+        self.radius  = 25
+        self.color = Qianhuang
+        self.status = True # True is not being eaten yet
+    def draw(self):
+        pygame.draw.circle(screen, self.color, (self.x ,self.y) , self.radius, 0)
+
+    def flee(self,FromX,FromY):
+        vfactor = 60  # inversely proportional to the rejecting force
+        boundaryvelocity = 80000  # proportional to the rejecting force
+        self.vx = self.x - FromX
+        self.vy = self.y - FromY
+        self.vx = self.vx // vfactor
+        self.vy = self.vy // vfactor
+        if self.x >= width:
+            self.vx = -10
+            self.x = width
+        elif self.x <= 0:
+            self.vx = 10
+            self.x = 0
+        else:
+            self.vx += int(-boundaryvelocity/((width-self.x)**2) + (boundaryvelocity/(self.x**2)) )
+
+        if self.y >= height:
+            self.vy = -10
+            self.y = height
+        elif self.y <= 0:
+            self.vy = 10
+            self.y  = 0
+        else:
+            self.vy += int(-boundaryvelocity / ((height - self.y) ** 2) + (boundaryvelocity / (self.y ** 2)))
+        self.x  = self.x + self.vx
+        self.y  = self.y + self.vy
+
+    def redraw(self):
+        self.x =  random.randint(25,width-25)   
+        self.y =  random.randint(20,height-20)
+        self.draw()
+        self.status = True
+
+def collisioncheck(SnakeHead, fruit):
+    if fruit.status :
+        if ((SnakeHead.x - fruit.x) ** 2 + (SnakeHead.y - fruit.y) ** 2) < (SnakeHead.radius + fruit.radius) ** 2:
+            fruit.status = False # Eaten
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+
+position = size[0] // 2 , size[1] // 2
+moving = False
+clock = pygame.time.Clock()
+
+# initialization
+MySnake = [Circle()]
+YourSnake = [Circle]
+MySnake[0].x,MySnake[0].y = position
+
+fruits =  [Fruit(),Fruit(),Fruit()]
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+        if event.type == pygame.MOUSEBUTTONDOWN: # acquire event click
+            if event.button == 1: 
+                moving = True
+        if event.type == pygame.MOUSEBUTTONUP: # acquire event release
+            if event.button == 1:
+                moving = False
+
+
+    screen.fill(Shenqing) # fill the screen 
+    if moving:
+        mouseposition = pygame.mouse.get_pos() # update the location
+        for i in range(len(MySnake)):
+            if i == 0:
+                MySnake[i].move(mouseposition[0],mouseposition[1])
+            else:
+                MySnake[i].move(MySnake[i-1].x,MySnake[i-1].y)
+        for i in range (len(fruits)):
+            fruits[i].flee(MySnake[0].x,MySnake[0].y)
+        for i in range(len(fruits)):
+            if collisioncheck(MySnake[0], fruits[i]):
+                MySnake.append(Circle())
+                MySnake[-1].x = MySnake[-2].x
+                MySnake[-1].y = MySnake[-2].y
+                fruits[i].redraw()
+
+    clock.tick(40)
+
+    for cir in MySnake:
+        cir.draw()
+    for fru in fruits:
+        fru.draw()
+    '''
+    # Debug 
+
+    for i in range(len(fruits)):
+        text1 = font.render(str(fruits[i].x) + ','+str(fruits[i].y), 1, (0, 0, 0))
+        screen.blit(text1, (190, 400+i*20))  # showing location in the screen
+    '''
+    #  refresh the screen
+    pygame.display.flip()
